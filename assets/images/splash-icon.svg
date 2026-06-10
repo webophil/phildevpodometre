@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 129.29 129.29" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="cadrant-g1" x1="-15.4" y1="111.43" x2="112.35" y2="-13.8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6313"/>
+      <stop offset="1" stop-color="#fc8d38"/>
+    </linearGradient>
+    <linearGradient id="cadrant-g2" x1="16.76" y1="144.24" x2="144.51" y2="19.01" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6313"/>
+      <stop offset="1" stop-color="#fc8d38"/>
+    </linearGradient>
+    <linearGradient id="cadrant-g3" x1="-13.24" y1="113.64" x2="114.51" y2="-11.59" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6313"/>
+      <stop offset="1" stop-color="#fc8d38"/>
+    </linearGradient>
+    <linearGradient id="cadrant-g4" x1="40.2" y1="168.15" x2="167.95" y2="42.92" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6313"/>
+      <stop offset="1" stop-color="#fc8d38"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <polygon fill="url(#cadrant-g1)" points="0 64.65 0 96.97 32.32 96.97 32.32 32.32 0 64.65"/>
+    <polygon fill="url(#cadrant-g2)" points="32.32 129.29 64.65 129.29 96.97 96.97 32.32 96.97 32.32 129.29"/>
+    <polygon fill="url(#cadrant-g3)" points="107.74 0 64.65 0 32.32 32.32 107.74 32.32 107.74 0"/>
+    <polygon fill="url(#cadrant-g4)" points="96.97 96.97 129.29 96.97 129.29 64.65 96.97 96.97"/>
+  </g>
+</svg>
