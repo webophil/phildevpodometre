@@ -21,11 +21,10 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single"
     },
     "experiments": {
-      "baseUrl": "."
+      "baseUrl": "/"
     },
     "plugins": [
       "expo-router",
