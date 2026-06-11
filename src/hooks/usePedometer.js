@@ -8,22 +8,29 @@ export const usePedometer = () => {
   const [currentStepCount, setCurrentStepCount] = useState(0);
 
   const subscribe = async () => {
-    const isAvailable = await Pedometer.isAvailableAsync();
-    setIsPedometerAvailable(String(isAvailable));
+    try {
+      const isAvailable = await Pedometer.isAvailableAsync();
+      setIsPedometerAvailable(String(isAvailable));
 
-    if (isAvailable) {
-      const end = new Date();
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
+      if (isAvailable) {
+        const end = new Date();
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
 
-      const pastStepCountResult = await Pedometer.getStepCountAsync(start, end);
-      if (pastStepCountResult) {
-        setPastStepCount(pastStepCountResult.steps);
+        const pastStepCountResult = await Pedometer.getStepCountAsync(start, end);
+        if (pastStepCountResult && typeof pastStepCountResult.steps === 'number') {
+          setPastStepCount(pastStepCountResult.steps);
+        }
+
+        return Pedometer.watchStepCount(result => {
+          if (result && typeof result.steps === 'number') {
+            setCurrentStepCount(result.steps);
+          }
+        });
       }
-
-      return Pedometer.watchStepCount(result => {
-        setCurrentStepCount(result.steps);
-      });
+    } catch (error) {
+      console.error('Pedometer error:', error);
+      setIsPedometerAvailable('false');
     }
   };
 

@@ -12,19 +12,19 @@ import Svg, { Circle } from 'react-native-svg';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const StepProgressCircle = ({ steps, goal }) => {
+const StepProgressCircle = ({ steps = 0, goal = 10000 }) => {
   const size = 220;
   const strokeWidth = 15;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const progress = Math.min(steps / goal, 1);
+  const progress = goal > 0 ? Math.min(steps / goal, 1) : 0;
   const animatedValue = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(animatedValue, {
       toValue: progress,
       duration: 1500,
-      useNativeDriver: true,
+      useNativeDriver: false, // SVG properties don't support native driver
     }).start();
   }, [progress]);
 
@@ -33,7 +33,7 @@ const StepProgressCircle = ({ steps, goal }) => {
     outputRange: [circumference, 0],
   });
 
-  const percentage = Math.round(progress * 100);
+  const percentage = isNaN(progress) ? 0 : Math.round(progress * 100);
 
   return (
     <View style={styles.circleContainer}>
@@ -60,10 +60,16 @@ const StepProgressCircle = ({ steps, goal }) => {
         />
       </Svg>
       <View style={styles.circleTextContainer}>
-        <Text style={[typography.hero, { color: theme.colors.onSurface }]}>{steps.toLocaleString()}</Text>
-        <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant }]}>sur {goal.toLocaleString()} pas</Text>
+        <Text style={[typography.hero, { color: theme.colors.onSurface }]}>
+          {Number(steps || 0).toLocaleString()}
+        </Text>
+        <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant }]}>
+          sur {Number(goal || 10000).toLocaleString()} pas
+        </Text>
         <View style={styles.percentageBadge}>
-          <Text style={[typography.caption, { color: theme.colors.primary, fontWeight: '700' }]}>{percentage}%</Text>
+          <Text style={[typography.caption, { color: theme.colors.primary, fontWeight: '700' }]}>
+            {percentage}%
+          </Text>
         </View>
       </View>
     </View>
@@ -71,30 +77,37 @@ const StepProgressCircle = ({ steps, goal }) => {
 };
 
 export default function DashboardScreen() {
-  const { totalSteps, isPedometerAvailable } = usePedometer();
+  const pedometer = usePedometer() || {};
+  const totalSteps = pedometer.totalSteps || 0;
+  const isPedometerAvailable = pedometer.isPedometerAvailable || 'false';
+  
   const [data, setData] = useState({ steps: 0, goal: 10000, distance: '0', calories: 0 });
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     const fetchData = async () => {
-      const stepData = await getStepsByDate(today);
-      const userProfile = await getUserProfile();
-      
-      // Use real steps if available, otherwise fallback to mock/saved data
-      const displaySteps = isPedometerAvailable === 'true' ? totalSteps : stepData.count;
-      
-      // Sync real steps to our "database" if they are higher
-      if (isPedometerAvailable === 'true' && totalSteps > stepData.count) {
-        await updateSteps(today, totalSteps);
-      }
+      try {
+        const stepData = await getStepsByDate(today);
+        const userProfile = await getUserProfile();
+        
+        // Use real steps if available, otherwise fallback to mock/saved data
+        const displaySteps = isPedometerAvailable === 'true' ? totalSteps : (stepData?.count || 0);
+        
+        // Sync real steps to our "database" if they are higher
+        if (isPedometerAvailable === 'true' && totalSteps > (stepData?.count || 0)) {
+          await updateSteps(today, totalSteps);
+        }
 
-      const metrics = calculateMetrics(displaySteps, userProfile);
-      setData({
-        steps: displaySteps,
-        goal: stepData.goal,
-        distance: metrics.distance,
-        calories: metrics.calories,
-      });
+        const metrics = calculateMetrics(displaySteps, userProfile || {});
+        setData({
+          steps: displaySteps,
+          goal: stepData?.goal || 10000,
+          distance: metrics.distance,
+          calories: metrics.calories,
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
     };
     fetchData();
   }, [totalSteps, isPedometerAvailable]);
