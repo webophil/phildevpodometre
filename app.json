@@ -5,9 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.svg",
-    "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.app.mobile"
@@ -23,9 +22,6 @@
       "bundler": "metro",
       "output": "single"
     },
-    "experiments": {
-      "baseUrl": "/"
-    },
     "plugins": [
       "expo-router",
       [
@@ -38,6 +34,10 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "experiments": {
+      "baseUrl": "/"
+    },
+    "scheme": "myapp"
   }
 }
