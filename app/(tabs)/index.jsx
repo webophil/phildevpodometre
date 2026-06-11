@@ -12,7 +12,9 @@ import { startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 
 const ProgressCircle = ({ steps = 0, goal = 10000 }) => {
   const { width } = useWindowDimensions();
-  const CIRCLE_SIZE = Math.min(width * 0.6, 300);
+  // Ensure width is valid, fallback to a default if 0 (can happen on initial web render)
+  const safeWidth = width || 390;
+  const CIRCLE_SIZE = Math.min(safeWidth * 0.6, 300);
   const STROKE_WIDTH = 15;
   const RADIUS = Math.max((CIRCLE_SIZE - STROKE_WIDTH) / 2, 0);
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -21,6 +23,8 @@ const ProgressCircle = ({ steps = 0, goal = 10000 }) => {
   const safeGoal = isNaN(goal) || goal <= 0 ? 10000 : goal;
   const progress = Math.min(safeSteps / safeGoal, 1);
   const strokeDashoffset = CIRCUMFERENCE - progress * CIRCUMFERENCE;
+
+  if (CIRCLE_SIZE <= 0) return null;
 
   return (
     <View style={[styles.progressContainer, { width: CIRCLE_SIZE, height: CIRCLE_SIZE }]}>
@@ -66,16 +70,20 @@ export default function HomeScreen() {
   const dailyGoal = 10000;
 
   useEffect(() => {
+    let isMounted = true;
     const fetchWeeklyAverage = async () => {
       try {
         const allSteps = await getAllSteps();
+        if (!isMounted) return;
+
         const now = new Date();
         const start = startOfWeek(now, { weekStartsOn: 1 });
         const end = endOfWeek(now, { weekStartsOn: 1 });
         
         const currentWeekSteps = (allSteps || []).filter(d => {
           try {
-            return isWithinInterval(new Date(d.date), { start, end });
+            const stepDate = new Date(d.date);
+            return !isNaN(stepDate.getTime()) && isWithinInterval(stepDate, { start, end });
           } catch (e) {
             return false;
           }
@@ -87,27 +95,32 @@ export default function HomeScreen() {
       } catch (error) {
         console.error('Error fetching weekly average:', error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchWeeklyAverage();
+    return () => { isMounted = false; };
   }, []);
 
-  if (isPedometerAvailable === 'checking' || isLoading) {
+  // Don't block the whole screen if pedometer is still checking, 
+  // only block if we are fetching initial data from API
+  if (isLoading) {
     return (
-      <ScreenWrapper contentContainerStyle={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[typography.body, { marginTop: spacing.md, color: theme.colors.onSurfaceVariant }]}>
-          Chargement de vos données...
+          Chargement...
         </Text>
-      </ScreenWrapper>
+      </View>
     );
   }
 
   return (
     <ScreenWrapper>
-      <AppHeader title="Accueil" />
+      <AppHeader title="Cadrant" />
       
       <View style={styles.mainContent}>
         <ProgressCircle steps={totalSteps} goal={dailyGoal} />
@@ -116,7 +129,7 @@ export default function HomeScreen() {
           <Card style={styles.warningCard}>
             <MaterialCommunityIcons name="alert-circle-outline" size={20} color={theme.colors.error} />
             <Text style={styles.warningText}>
-              Le podomètre n'est pas disponible sur cet appareil. Les pas ne seront pas comptés en temps réel.
+              Podomètre non disponible. Affichage des données simulées.
             </Text>
           </Card>
         )}
@@ -148,8 +161,8 @@ export default function HomeScreen() {
             <MaterialCommunityIcons name="information-outline" size={20} color={theme.colors.primary} />
             <Text style={[typography.body, { marginLeft: spacing.sm, flex: 1 }]}>
               {totalSteps >= dailyGoal 
-                ? "Félicitations ! Vous avez atteint votre objectif aujourd'hui !" 
-                : `Continuez comme ça ! Vous avez atteint ${Math.round(((totalSteps || 0) / dailyGoal) * 100)}% de votre objectif.`}
+                ? "Félicitations ! Objectif atteint !" 
+                : `Encore un effort ! ${Math.round(((totalSteps || 0) / dailyGoal) * 100)}% de l'objectif.`}
             </Text>
           </View>
         </Card>
@@ -163,6 +176,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.background,
   },
   mainContent: {
     flex: 1,
@@ -217,4 +231,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
