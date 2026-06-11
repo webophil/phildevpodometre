@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import * as Sensors from 'expo-sensors';
 import { Platform } from 'react-native';
+import * as Sensors from 'expo-sensors';
 
-// Safely extract Pedometer
-const Pedometer = Sensors?.Pedometer;
+// Safely extract Pedometer with a fallback to avoid crashes during import/initialization
+const Pedometer = Sensors?.Pedometer || null;
 
 export const usePedometer = () => {
   const [isPedometerAvailable, setIsPedometerAvailable] = useState('checking');
@@ -11,16 +11,15 @@ export const usePedometer = () => {
   const [currentStepCount, setCurrentStepCount] = useState(0);
 
   const subscribe = async () => {
-    // Pedometer is generally not supported on web browsers
+    // Pedometer is not supported on web browsers
     if (Platform.OS === 'web') {
       setIsPedometerAvailable('false');
       return;
     }
 
     try {
-      // Check if Pedometer is available on the device
+      // Check if Pedometer exists and has the necessary methods
       if (!Pedometer || typeof Pedometer.isAvailableAsync !== 'function') {
-        console.warn('Pedometer is not available on this device/platform');
         setIsPedometerAvailable('false');
         return;
       }
@@ -38,16 +37,16 @@ export const usePedometer = () => {
         // Check for permission methods existence
         if (typeof Pedometer.getPermissionsAsync === 'function') {
           const perms = await Pedometer.getPermissionsAsync();
-          isGranted = perms?.granted === true;
+          isGranted = perms?.status === 'granted' || perms?.granted === true;
         }
         
         if (!isGranted && typeof Pedometer.requestPermissionsAsync === 'function') {
           const perms = await Pedometer.requestPermissionsAsync();
-          isGranted = perms?.granted === true;
+          isGranted = perms?.status === 'granted' || perms?.granted === true;
         }
       } catch (permError) {
-        console.warn('Permission check failed:', permError);
-        // On some platforms, we might still be able to try getting steps
+        console.warn('Pedometer permission check failed:', permError);
+        // On some platforms, we might still be able to try getting steps even if permission check fails
       }
 
       // If we still don't have permission, we can't proceed with real data
@@ -64,9 +63,11 @@ export const usePedometer = () => {
 
       // Get steps from the beginning of the day
       try {
-        const pastStepCountResult = await Pedometer.getStepCountAsync(start, end);
-        if (pastStepCountResult && typeof pastStepCountResult.steps === 'number') {
-          setPastStepCount(pastStepCountResult.steps);
+        if (typeof Pedometer.getStepCountAsync === 'function') {
+          const pastStepCountResult = await Pedometer.getStepCountAsync(start, end);
+          if (pastStepCountResult && typeof pastStepCountResult.steps === 'number') {
+            setPastStepCount(pastStepCountResult.steps);
+          }
         }
       } catch (stepError) {
         console.warn('Error getting past steps:', stepError);
@@ -81,7 +82,7 @@ export const usePedometer = () => {
         });
       }
     } catch (error) {
-      console.error('Pedometer error:', error);
+      console.error('Pedometer subscription error:', error);
       setIsPedometerAvailable('false');
     }
   };
@@ -93,17 +94,17 @@ export const usePedometer = () => {
     subscribe().then(sub => {
       if (isMounted) {
         subscription = sub;
-      } else if (sub && sub.remove) {
+      } else if (sub && typeof sub.remove === 'function') {
         sub.remove();
       }
     }).catch(err => {
-      console.error('Failed to subscribe to pedometer:', err);
+      console.error('Failed to initialize pedometer:', err);
       if (isMounted) setIsPedometerAvailable('false');
     });
 
     return () => {
       isMounted = false;
-      if (subscription && subscription.remove) {
+      if (subscription && typeof subscription.remove === 'function') {
         subscription.remove();
       }
     };
