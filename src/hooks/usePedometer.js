@@ -16,6 +16,11 @@ export const usePedometer = () => {
 
     try {
       // Check if Pedometer is available on the device
+      if (!Pedometer || typeof Pedometer.isAvailableAsync !== 'function') {
+        setIsPedometerAvailable('false');
+        return;
+      }
+
       const isAvailable = await Pedometer.isAvailableAsync();
       
       if (!isAvailable) {
@@ -23,25 +28,24 @@ export const usePedometer = () => {
         return;
       }
 
-      // Request permissions - this is where the "cannot read property 'granted' of undefined" 
-      // error often occurs if the result is not handled defensively.
-      let permissionResult;
+      // Robust permission handling
+      let isGranted = false;
       try {
-        if (Pedometer.getPermissionsAsync) {
-          permissionResult = await Pedometer.getPermissionsAsync();
+        if (typeof Pedometer.getPermissionsAsync === 'function') {
+          const perms = await Pedometer.getPermissionsAsync();
+          isGranted = perms?.granted === true;
         }
         
-        if (!permissionResult || !permissionResult.granted) {
-          if (Pedometer.requestPermissionsAsync) {
-            permissionResult = await Pedometer.requestPermissionsAsync();
-          }
+        if (!isGranted && typeof Pedometer.requestPermissionsAsync === 'function') {
+          const perms = await Pedometer.requestPermissionsAsync();
+          isGranted = perms?.granted === true;
         }
       } catch (permError) {
         console.warn('Permission check failed:', permError);
       }
 
       // If we still don't have permission, we can't proceed
-      if (!permissionResult || !permissionResult.granted) {
+      if (!isGranted) {
         setIsPedometerAvailable('false');
         return;
       }
