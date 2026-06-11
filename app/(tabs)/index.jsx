@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { theme, spacing, typography, shadows } from '@/theme';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getStepsByDate } from '@/api/steps';
+import { getStepsByDate, updateSteps } from '@/api/steps';
 import { getUserProfile, calculateMetrics } from '@/api/user';
+import { usePedometer } from '@/hooks/usePedometer';
 import Svg, { Circle } from 'react-native-svg';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -70,6 +71,7 @@ const StepProgressCircle = ({ steps, goal }) => {
 };
 
 export default function DashboardScreen() {
+  const { totalSteps, isPedometerAvailable } = usePedometer();
   const [data, setData] = useState({ steps: 0, goal: 10000, distance: '0', calories: 0 });
   const today = new Date().toISOString().split('T')[0];
 
@@ -77,16 +79,25 @@ export default function DashboardScreen() {
     const fetchData = async () => {
       const stepData = await getStepsByDate(today);
       const userProfile = await getUserProfile();
-      const metrics = calculateMetrics(stepData.count, userProfile);
+      
+      // Use real steps if available, otherwise fallback to mock/saved data
+      const displaySteps = isPedometerAvailable === 'true' ? totalSteps : stepData.count;
+      
+      // Sync real steps to our "database" if they are higher
+      if (isPedometerAvailable === 'true' && totalSteps > stepData.count) {
+        await updateSteps(today, totalSteps);
+      }
+
+      const metrics = calculateMetrics(displaySteps, userProfile);
       setData({
-        steps: stepData.count,
+        steps: displaySteps,
         goal: stepData.goal,
         distance: metrics.distance,
         calories: metrics.calories,
       });
     };
     fetchData();
-  }, []);
+  }, [totalSteps, isPedometerAvailable]);
 
   return (
     <ScreenWrapper>
@@ -111,14 +122,18 @@ export default function DashboardScreen() {
 
         <Card style={styles.liveCounterCard}>
           <View style={styles.liveHeader}>
-            <View style={styles.liveIndicator} />
-            <Text style={[typography.h3, { marginLeft: spacing.sm }]}>Activité en direct</Text>
+            <View style={[styles.liveIndicator, { backgroundColor: isPedometerAvailable === 'true' ? theme.colors.primary : theme.colors.error }]} />
+            <Text style={[typography.h3, { marginLeft: spacing.sm }]}>
+              {isPedometerAvailable === 'true' ? 'Activité en direct' : 'Capteur indisponible'}
+            </Text>
           </View>
           <Text style={[typography.hero, { textAlign: 'center', marginVertical: spacing.md }]}>
             {data.steps.toLocaleString()}
           </Text>
           <Text style={[typography.body, { textAlign: 'center', color: theme.colors.onSurfaceVariant }]}>
-            Continuez comme ça ! Vous êtes à {10000 - data.steps} pas de votre objectif.
+            {isPedometerAvailable === 'true' 
+              ? `Continuez comme ça ! Vous êtes à ${Math.max(0, data.goal - data.steps)} pas de votre objectif.`
+              : "Le podomètre n'est pas disponible sur cet appareil ou dans ce navigateur. Utilisation des données simulées."}
           </Text>
         </Card>
       </View>
