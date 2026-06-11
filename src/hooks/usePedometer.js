@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Pedometer } from 'expo-sensors';
+import * as Sensors from 'expo-sensors';
 import { Platform } from 'react-native';
+
+// Safely extract Pedometer
+const Pedometer = Sensors?.Pedometer;
 
 export const usePedometer = () => {
   const [isPedometerAvailable, setIsPedometerAvailable] = useState('checking');
@@ -17,6 +20,7 @@ export const usePedometer = () => {
     try {
       // Check if Pedometer is available on the device
       if (!Pedometer || typeof Pedometer.isAvailableAsync !== 'function') {
+        console.warn('Pedometer is not available on this device/platform');
         setIsPedometerAvailable('false');
         return;
       }
@@ -31,6 +35,7 @@ export const usePedometer = () => {
       // Robust permission handling
       let isGranted = false;
       try {
+        // Check for permission methods existence
         if (typeof Pedometer.getPermissionsAsync === 'function') {
           const perms = await Pedometer.getPermissionsAsync();
           isGranted = perms?.granted === true;
@@ -42,9 +47,10 @@ export const usePedometer = () => {
         }
       } catch (permError) {
         console.warn('Permission check failed:', permError);
+        // On some platforms, we might still be able to try getting steps
       }
 
-      // If we still don't have permission, we can't proceed
+      // If we still don't have permission, we can't proceed with real data
       if (!isGranted) {
         setIsPedometerAvailable('false');
         return;
@@ -67,11 +73,13 @@ export const usePedometer = () => {
       }
 
       // Watch for new steps
-      return Pedometer.watchStepCount(result => {
-        if (result && typeof result.steps === 'number') {
-          setCurrentStepCount(result.steps);
-        }
-      });
+      if (typeof Pedometer.watchStepCount === 'function') {
+        return Pedometer.watchStepCount(result => {
+          if (result && typeof result.steps === 'number') {
+            setCurrentStepCount(result.steps);
+          }
+        });
+      }
     } catch (error) {
       console.error('Pedometer error:', error);
       setIsPedometerAvailable('false');
@@ -88,6 +96,9 @@ export const usePedometer = () => {
       } else if (sub && sub.remove) {
         sub.remove();
       }
+    }).catch(err => {
+      console.error('Failed to subscribe to pedometer:', err);
+      if (isMounted) setIsPedometerAvailable('false');
     });
 
     return () => {
