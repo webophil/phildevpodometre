@@ -1,12 +1,23 @@
-export const mockSteps = [
-  { id: '1', date: '2023-10-20', count: 8432, goal: 10000 },
-  { id: '2', date: '2023-10-21', count: 12500, goal: 10000 },
-  { id: '3', date: '2023-10-22', count: 6200, goal: 10000 },
-  { id: '4', date: '2023-10-23', count: 9800, goal: 10000 },
-  { id: '5', date: '2023-10-24', count: 11200, goal: 10000 },
-  { id: '6', date: '2023-10-25', count: 7500, goal: 10000 },
-  { id: '7', date: '2023-10-26', count: 10100, goal: 10000 },
-];
+import { format, subDays } from 'date-fns';
+
+// Generate mock data for the last 30 days
+const generateMockSteps = () => {
+  const steps = [];
+  for (let i = 0; i < 30; i++) {
+    const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
+    // Random steps between 3000 and 12000
+    const count = Math.floor(Math.random() * (12000 - 3000 + 1)) + 3000;
+    steps.push({
+      id: (30 - i).toString(),
+      date,
+      count,
+      goal: 10000,
+    });
+  }
+  return steps.reverse();
+};
+
+export const mockSteps = generateMockSteps();
 
 export const mockUser = {
   id: 'user-1',
