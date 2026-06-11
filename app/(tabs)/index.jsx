@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { theme, spacing, typography } from '@/theme';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { AppHeader } from '@/components/AppHeader';
@@ -10,18 +10,20 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 
-const { width } = Dimensions.get('window');
-const CIRCLE_SIZE = width * 0.6;
-const STROKE_WIDTH = 15;
-const RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-const ProgressCircle = ({ steps, goal }) => {
-  const progress = Math.min(steps / goal, 1);
+const ProgressCircle = ({ steps = 0, goal = 10000 }) => {
+  const { width } = useWindowDimensions();
+  const CIRCLE_SIZE = Math.min(width * 0.6, 300);
+  const STROKE_WIDTH = 15;
+  const RADIUS = Math.max((CIRCLE_SIZE - STROKE_WIDTH) / 2, 0);
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  
+  const safeSteps = isNaN(steps) ? 0 : steps;
+  const safeGoal = isNaN(goal) || goal <= 0 ? 10000 : goal;
+  const progress = Math.min(safeSteps / safeGoal, 1);
   const strokeDashoffset = CIRCUMFERENCE - progress * CIRCUMFERENCE;
 
   return (
-    <View style={styles.progressContainer}>
+    <View style={[styles.progressContainer, { width: CIRCLE_SIZE, height: CIRCLE_SIZE }]}>
       <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE}>
         <Circle
           cx={CIRCLE_SIZE / 2}
@@ -39,7 +41,7 @@ const ProgressCircle = ({ steps, goal }) => {
           strokeWidth={STROKE_WIDTH}
           fill="none"
           strokeDasharray={CIRCUMFERENCE}
-          strokeDashoffset={strokeDashoffset}
+          strokeDashoffset={isNaN(strokeDashoffset) ? CIRCUMFERENCE : strokeDashoffset}
           strokeLinecap="round"
           transform={`rotate(-90 ${CIRCLE_SIZE / 2} ${CIRCLE_SIZE / 2})`}
         />
@@ -47,10 +49,10 @@ const ProgressCircle = ({ steps, goal }) => {
       <View style={styles.progressTextContainer}>
         <MaterialCommunityIcons name="shoe-print" size={32} color={theme.colors.primary} />
         <Text style={[typography.hero, { color: theme.colors.onSurface }]}>
-          {steps.toLocaleString()}
+          {(safeSteps || 0).toLocaleString()}
         </Text>
         <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant }]}>
-          Objectif: {goal.toLocaleString()}
+          Objectif: {safeGoal.toLocaleString()}
         </Text>
       </View>
     </View>
@@ -60,26 +62,48 @@ const ProgressCircle = ({ steps, goal }) => {
 export default function HomeScreen() {
   const { totalSteps, isPedometerAvailable } = usePedometer();
   const [weeklyAverage, setWeeklyAverage] = useState(0);
-  const dailyGoal = 10000; // This could come from user settings
+  const [isLoading, setIsLoading] = useState(true);
+  const dailyGoal = 10000;
 
   useEffect(() => {
     const fetchWeeklyAverage = async () => {
-      const allSteps = await getAllSteps();
-      const now = new Date();
-      const start = startOfWeek(now, { weekStartsOn: 1 });
-      const end = endOfWeek(now, { weekStartsOn: 1 });
-      
-      const currentWeekSteps = allSteps.filter(d => 
-        isWithinInterval(new Date(d.date), { start, end })
-      );
+      try {
+        const allSteps = await getAllSteps();
+        const now = new Date();
+        const start = startOfWeek(now, { weekStartsOn: 1 });
+        const end = endOfWeek(now, { weekStartsOn: 1 });
+        
+        const currentWeekSteps = (allSteps || []).filter(d => {
+          try {
+            return isWithinInterval(new Date(d.date), { start, end });
+          } catch (e) {
+            return false;
+          }
+        });
 
-      const total = currentWeekSteps.reduce((acc, curr) => acc + curr.count, 0);
-      const average = currentWeekSteps.length > 0 ? Math.round(total / currentWeekSteps.length) : 0;
-      setWeeklyAverage(average);
+        const total = currentWeekSteps.reduce((acc, curr) => acc + (curr.count || 0), 0);
+        const average = currentWeekSteps.length > 0 ? Math.round(total / currentWeekSteps.length) : 0;
+        setWeeklyAverage(average);
+      } catch (error) {
+        console.error('Error fetching weekly average:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchWeeklyAverage();
   }, []);
+
+  if (isPedometerAvailable === 'checking' || isLoading) {
+    return (
+      <ScreenWrapper contentContainerStyle={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[typography.body, { marginTop: spacing.md, color: theme.colors.onSurfaceVariant }]}>
+          Chargement de vos données...
+        </Text>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>
@@ -89,16 +113,19 @@ export default function HomeScreen() {
         <ProgressCircle steps={totalSteps} goal={dailyGoal} />
 
         {isPedometerAvailable === 'false' && (
-          <Text style={styles.warningText}>
-            Le podomètre n'est pas disponible sur cet appareil (ou en mode web).
-          </Text>
+          <Card style={styles.warningCard}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={20} color={theme.colors.error} />
+            <Text style={styles.warningText}>
+              Le podomètre n'est pas disponible sur cet appareil. Les pas ne seront pas comptés en temps réel.
+            </Text>
+          </Card>
         )}
 
         <View style={styles.statsGrid}>
           <Card style={styles.statCard}>
             <MaterialCommunityIcons name="calendar-week" size={24} color={theme.colors.secondary} />
             <Text style={[typography.h2, { marginTop: spacing.sm }]}>
-              {weeklyAverage.toLocaleString()}
+              {(weeklyAverage || 0).toLocaleString()}
             </Text>
             <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant, textAlign: 'center' }]}>
               Moyenne hebdo
@@ -108,7 +135,7 @@ export default function HomeScreen() {
           <Card style={styles.statCard}>
             <MaterialCommunityIcons name="fire" size={24} color="#FF7043" />
             <Text style={[typography.h2, { marginTop: spacing.sm }]}>
-              {Math.round(totalSteps * 0.04)}
+              {Math.round((totalSteps || 0) * 0.04)}
             </Text>
             <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant, textAlign: 'center' }]}>
               Calories (kcal)
@@ -120,7 +147,9 @@ export default function HomeScreen() {
           <View style={styles.infoRow}>
             <MaterialCommunityIcons name="information-outline" size={20} color={theme.colors.primary} />
             <Text style={[typography.body, { marginLeft: spacing.sm, flex: 1 }]}>
-              Continuez comme ça ! Vous avez atteint {Math.round((totalSteps / dailyGoal) * 100)}% de votre objectif aujourd'hui.
+              {totalSteps >= dailyGoal 
+                ? "Félicitations ! Vous avez atteint votre objectif aujourd'hui !" 
+                : `Continuez comme ça ! Vous avez atteint ${Math.round(((totalSteps || 0) / dailyGoal) * 100)}% de votre objectif.`}
             </Text>
           </View>
         </Card>
@@ -130,6 +159,11 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   mainContent: {
     flex: 1,
     alignItems: 'center',
@@ -166,11 +200,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: theme.colors.errorContainer,
+    borderColor: theme.colors.error,
+    padding: spacing.sm,
+  },
   warningText: {
     color: theme.colors.error,
-    textAlign: 'center',
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
+    flex: 1,
+    marginLeft: spacing.sm,
     fontSize: 12,
+    fontWeight: '500',
   },
 });
+
