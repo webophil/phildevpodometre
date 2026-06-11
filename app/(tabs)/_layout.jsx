@@ -26,15 +26,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home-variant-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
           title: 'Historique',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="chart-timeline-variant" size={size} color={color} />
