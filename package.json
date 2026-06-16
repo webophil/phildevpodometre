@@ -1,15 +1,20 @@
 {
   "name": "react-native-app",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webophil/phildevpodometre.git"
+  },
+  "private": true,
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "lint": "expo lint",
     "build": "expo export --platform web --output-dir build --no-minify",
-    "build:android": "eas build --platform android --profile preview",
-    "lint": "expo lint"
+    "build:android": "eas build --platform android --profile preview"
   },
   "dependencies": {
     "@babel/runtime": "^7.20.6",
@@ -79,6 +84,5 @@
         "react-native-reanimated"
       ]
     }
-  },
-  "private": true
+  }
 }
