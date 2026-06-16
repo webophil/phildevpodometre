@@ -72,7 +72,7 @@ export default function SettingsScreen() {
       <AppHeader title="Configuration" showSync={false} />
 
       <Card>
-        <Text style={[typography.h3, { marginBottom: spacing.lg }]}>Profil Utilisateur</Text>
+        <Text style={[typography.h3, { marginBottom: spacing.lg }]}>Votre Profil</Text>
         
         <View style={styles.genderRow}>
           <TouchableOpacity
