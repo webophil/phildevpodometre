@@ -9,7 +9,7 @@ export const AppHeader = ({ title, showSync = true }) => {
     <View style={styles.container}>
       <View style={styles.leftSection}>
         <Image 
-          source={require('@/../assets/images/cadrant-monogram-orange.svg')} 
+          source="/flash-uploads/c04b0661af1a468c9a4760ac6304b7cc_iconePhD.png" 
           style={styles.logo}
           contentFit="contain"
         />

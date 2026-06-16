@@ -120,7 +120,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenWrapper>
-      <AppHeader title="Cadrant" />
+      <AppHeader title="Podomètre" />
       
       <View style={styles.mainContent}>
         <ProgressCircle steps={totalSteps} goal={dailyGoal} />
