@@ -141,7 +141,7 @@ export default function SettingsScreen() {
           suffix="cm"
         />
         <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant, marginTop: -spacing.sm }]}>
-          Calibrez la longueur de vos pas pour un calcul plus précis de la distance.
+          Calibrez la longueur de vos pas pour un calcul plus précis de la distance parcourue.
         </Text>
       </Card>
 
