@@ -132,7 +132,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
-        <Text style={[typography.h3, { marginBottom: spacing.lg }]}>Précision du Podomètre</Text>
+        <Text style={[typography.h3, { marginBottom: spacing.lg }]}>Etalonnage du Podomètre</Text>
         <Input
           label="Longueur de pas moyenne"
           value={profile.stepLength}
