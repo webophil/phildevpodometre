@@ -123,7 +123,7 @@ export default function SettingsScreen() {
         />
 
         <Input
-          label="Objectif quotidien"
+          label="Objectif idéal quotidien"
           value={profile.dailyGoal}
           onChangeText={(text) => setProfile({ ...profile, dailyGoal: text })}
           keyboardType="numeric"
